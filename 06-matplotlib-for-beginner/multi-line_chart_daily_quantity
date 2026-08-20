@@ -1,0 +1,76 @@
+# ====================================================================
+# PROJECT: 7 CASE STUDI KASUS BISNIS - RETAIL TOP 5 BRANDS ANALYTICS
+# MODUL: Data Visualization with Python Matplotlib for Beginner (Bab 6)
+# Skenario kasus oleh: DQLab x Digitalent Komdigi
+# ====================================================================
+
+import datetime
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# --------------------------------------------------------------------
+# PREPARATION: Data Loading & Base Feature Engineering
+# --------------------------------------------------------------------
+url = 'https://googleapis.com'
+dataset = pd.read_csv(url)
+
+# Ekstraksi kolom format tahun-bulan (order_month)
+dataset['order_month'] = dataset['order_date'].apply(
+    lambda x: datetime.datetime.strptime(x, '%Y-%m-%d').strftime('%Y-%m')
+)
+
+# Kalkulasi metrik bisnis Gross Merchandise Volume (GMV)
+dataset['gmv'] = dataset['item_price'] * dataset['quantity']
+
+
+# --------------------------------------------------------------------
+# CASE 1: Menentukan Top 5 Brands Berdasarkan Volume Penjualan (Quantity)
+# --------------------------------------------------------------------
+# Mengambil informasi top 5 brands berdasarkan total quantity di bulan Desember 2019
+top_brands = (dataset[dataset['order_month'] == '2019-12']
+              .groupby('brand')['quantity']
+              .sum()
+              .reset_index()
+              .sort_values(by='quantity', ascending=False)
+              .head(5)
+             )
+
+# Membuat DataFrame baru yang mengisolasi transaksi bulan Desember 2019 HANYA untuk top 5 brands
+dataset_top5brand_dec = dataset[
+    (dataset['order_month'] == '2019-12') & 
+    (dataset['brand'].isin(top_brands['brand'].to_list()))
+]
+
+
+# --------------------------------------------------------------------
+# CASE 2: Multi-line Chart Daily Quantity untuk Brand Top 5 (Desember 2019)
+# --------------------------------------------------------------------
+# Agregasi data harian berdasarkan tanggal order dan brand, lalu di-unstack untuk multi-line chart
+dataset_top5brand_dec.groupby(['order_date', 'brand'])['quantity'].sum().unstack().plot(
+    marker='.', cmap='plasma'
+)
+
+# Konfigurasi Judul, Label, Grid, dan Batas Sumbu Y
+plt.title('Daily Sold Quantity Dec 2019 - Breakdown by Brands', loc='center', pad=30, fontsize=15, color='blue')
+plt.xlabel('Order Date', fontsize=12)
+plt.ylabel('Quantity', fontsize=12)
+plt.grid(color='darkgray', linestyle=':', linewidth=0.5)
+plt.ylim(ymin=0)
+
+# Kustomisasi tata letak kotak Legenda di luar area grafik agar rapi
+plt.legend(loc='upper center', bbox_to_anchor=(1.1, 1), shadow=True, ncol=1)
+
+# Menambahkan Anotasi Panah untuk Menandai Titik Lonjakan Penjualan Secara Spesifik
+plt.annotate('Terjadi lonjakan', xy=(7, 310), xytext=(8, 300),
+             weight='bold', color='red',
+             arrowprops=dict(arrowstyle='->',
+                             connectionstyle='arc3',
+                             color='red')
+            )
+
+# Mengatur ukuran jendela visualisasi grafik (lebar 10 inci, tinggi 5 inci)
+plt.gcf().set_size_inches(10, 5)
+
+# Render & Tampilkan Grafik Multi-line Chart
+plt.tight_layout()
+plt.show()
